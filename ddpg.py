@@ -1,12 +1,9 @@
 # individual network settings for each actor + critic pair
 # see networkforall for details
 
-from networkforall import Network
-from utilities import hard_update, gumbel_softmax, onehot_from_logits
+from networkforall import Actor, Critic
 from torch.optim import Adam
-import torch
-import numpy as np
-
+from utilities import hard_update
 
 # add OU noise for exploration
 from OUNoise import OUNoise
@@ -18,14 +15,17 @@ class DDPGAgent:
     def __init__(self, in_actor, hidden_in_actor, hidden_out_actor, out_actor, in_critic, hidden_in_critic, hidden_out_critic, lr_actor=1.0e-2, lr_critic=1.0e-2):
         super(DDPGAgent, self).__init__()
 
-        self.actor = Network(in_actor, hidden_in_actor, hidden_out_actor, out_actor, actor=True).to(device)
-        self.critic = Network(in_critic, hidden_in_critic, hidden_out_critic, 1).to(device)
-        self.target_actor = Network(in_actor, hidden_in_actor, hidden_out_actor, out_actor, actor=True).to(device)
-        self.target_critic = Network(in_critic, hidden_in_critic, hidden_out_critic, 1).to(device)
+        self.actor = Actor(in_actor, hidden_in_actor, hidden_out_actor, out_actor).to(device)
+        self.critic = Critic(in_critic, hidden_in_critic, hidden_out_critic, 1).to(device)
+        self.target_actor = Actor(in_actor, hidden_in_actor, hidden_out_actor, out_actor).to(device)
+        self.target_critic = Critic(in_critic, hidden_in_critic, hidden_out_critic, 1).to(device)
 
-        self.noise = OUNoise(out_actor, scale=1.0 )
+        self.noise = OUNoise(out_actor, scale=1.0)
 
-        
+        # Initialize networks
+        self.actor.reset_parameters()
+        self.critic.reset_parameters()
+
         # initialize targets same as original networks
         hard_update(self.target_actor, self.actor)
         hard_update(self.target_critic, self.critic)

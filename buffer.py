@@ -1,18 +1,19 @@
-from collections import deque
 import random
+
+from collections import deque
 from utilities import transpose_list
 
 
 class ReplayBuffer:
-    def __init__(self,size):
+    def __init__(self, size):
         self.size = size
         self.deque = deque(maxlen=self.size)
 
-    def push(self,transition):
+    def push(self, transition):
         """push into the buffer"""
-        
+
         input_to_buffer = transpose_list(transition)
-    
+
         for item in input_to_buffer:
             self.deque.append(item)
 
@@ -25,6 +26,3 @@ class ReplayBuffer:
 
     def __len__(self):
         return len(self.deque)
-
-
-
