@@ -7,8 +7,7 @@ import torch
 from ddpg import DDPGAgent
 from utilities import soft_update, transpose_to_tensor
 
-#device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-device = 'cpu'
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 
 class MADDPG:
@@ -17,7 +16,7 @@ class MADDPG:
 
         # critic input = obs_full + actions = 14+2+2+2=20
         self.ddpg_agents = [DDPGAgent(14, 16, 8, 2, 20, 32, 16),
-                             DDPGAgent(14, 16, 8, 2, 20, 32, 16)]
+                            DDPGAgent(14, 16, 8, 2, 20, 32, 16)]
 
         self.discount_factor = discount_factor
         self.tau = tau
