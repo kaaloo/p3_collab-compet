@@ -18,6 +18,8 @@ class MADDPG:
         self.ddpg_agents = [DDPGAgent(14, 16, 8, 2, 20, 32, 16),
                             DDPGAgent(14, 16, 8, 2, 20, 32, 16)]
 
+        self.reward
+
         self.discount_factor = discount_factor
         self.tau = tau
         self.iter = 0
