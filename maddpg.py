@@ -15,13 +15,10 @@ class MADDPG:
         super(MADDPG, self).__init__()
 
         # critic input = obs_full + actions = 14+2+2+2=20
-        self.ddpg_agents = [DDPGAgent(14, 16, 8, 2, 20, 32, 16),
-                            DDPGAgent(14, 16, 8, 2, 20, 32, 16)]
-
-        self.reward
+        self.ddpg_agents = [DDPGAgent(14, 16, 8, 2, 20, 32, 16, tau=tau),
+                            DDPGAgent(14, 16, 8, 2, 20, 32, 16, tau=tau)]
 
         self.discount_factor = discount_factor
-        self.tau = tau
         self.iter = 0
 
     def get_actors(self):
@@ -116,5 +113,4 @@ class MADDPG:
         """soft update targets"""
         self.iter += 1
         for ddpg_agent in self.ddpg_agents:
-            soft_update(ddpg_agent.target_actor, ddpg_agent.actor, self.tau)
-            soft_update(ddpg_agent.target_critic, ddpg_agent.critic, self.tau)
+            ddpg_agent.update_targets()
