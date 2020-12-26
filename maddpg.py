@@ -5,7 +5,7 @@
 import torch
 
 from ddpg import DDPGAgent
-from utilities import soft_update, transpose_to_tensor
+from utilities import transpose_to_tensor
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
