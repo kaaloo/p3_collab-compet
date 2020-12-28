@@ -84,7 +84,17 @@ def main():
     buffer = ReplayBuffer(int(5000*episode_length))
 
     # initialize policy and critic
-    maddpg = CooperativeDDPGAgent(14, 16, 8, 2, 20, 32, 16, num_agents, discount_factor=discount_factor, tau=tau)
+    agent = CooperativeDDPGAgent(
+        state_size, 
+        2*state_size, 
+        state_size, 
+        action_size, 
+        state_size + action_size, 
+        2 * (state_size + action_size), 
+        state_size + action_size, 
+        num_agents, 
+        discount_factor=discount_factor, 
+        tau=tau)
     logger = SummaryWriter(log_dir=log_path)
     agent0_reward = []
     agent1_reward = []
@@ -100,7 +110,7 @@ def main():
 
         timer.update(episode)
 
-        reward_this_episode = np.zeros((1, 3))
+        reward_this_episode = np.zeros(num_agents)
         env_info = env.reset(train_mode=False)[brain_name]
         all_obs = env_info.vector_observations
         obs, obs_full = transpose_list(all_obs)
@@ -114,7 +124,7 @@ def main():
 
             # explore = only explore for a certain number of episodes
             # action input needs to be transposed
-            actions = maddpg.act(transpose_to_tensor(obs), noise=noise)
+            actions = agent.act(transpose_to_tensor(obs), noise=noise)
             noise *= noise_reduction
 
             actions_array = torch.stack(actions).detach().numpy()
@@ -145,8 +155,8 @@ def main():
         if len(buffer) > batchsize and episode % episode_per_update < 1:
             for a_i in range(3):
                 samples = buffer.sample(batchsize)
-                maddpg.update(samples, a_i, logger)
-            maddpg.update_targets()  # soft update the target network towards the actual networks
+                agent.update(samples, a_i, logger)
+            agent.update_targets()  # soft update the target network towards the actual networks
 
         for i in range(1):
             agent0_reward.append(reward_this_episode[i, 0])
@@ -165,10 +175,10 @@ def main():
         if save_info:
             for i in range(2):
 
-                save_dict = {'actor_params': maddpg.maddpg_agent[i].actor.state_dict(),
-                             'actor_optim_params': maddpg.maddpg_agent[i].actor_optimizer.state_dict(),
-                             'critic_params': maddpg.maddpg_agent[i].critic.state_dict(),
-                             'critic_optim_params': maddpg.maddpg_agent[i].critic_optimizer.state_dict()}
+                save_dict = {'actor_params': agent.maddpg_agent[i].actor.state_dict(),
+                             'actor_optim_params': agent.maddpg_agent[i].actor_optimizer.state_dict(),
+                             'critic_params': agent.maddpg_agent[i].critic.state_dict(),
+                             'critic_optim_params': agent.maddpg_agent[i].critic_optimizer.state_dict()}
                 save_dict_list.append(save_dict)
 
                 torch.save(save_dict_list,
