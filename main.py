@@ -43,7 +43,7 @@ def main():
 
     # amplitude of OU noise
     # this slowly decreases to 0
-    noise = 2
+    noise = 10
     noise_reduction = 0.9999
 
     discount_factor = 0.95

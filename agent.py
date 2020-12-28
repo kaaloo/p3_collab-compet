@@ -1,4 +1,5 @@
 import torch
+import torch.nn.functional as F
 
 from networks import Actor, Critic
 from torch.optim import Adam
@@ -116,10 +117,9 @@ class CooperativeDDPGAgent:
         q = self.critic(critic_input)
         q = q.squeeze()
 
-        huber_loss = torch.nn.SmoothL1Loss()
-        critic_loss = huber_loss(q, y.detach())
+        critic_loss = F.mse_loss(q, y.detach())
         critic_loss.backward()
-        #torch.nn.utils.clip_grad_norm_(self.critic.parameters(), 0.5)
+        torch.nn.utils.clip_grad_norm_(self.critic.parameters(), 0.5)
         self.critic_optimizer.step()
 
         return critic_loss.cpu().detach().item()
