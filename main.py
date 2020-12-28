@@ -10,7 +10,7 @@ from buffer import ReplayBuffer
 from agent import CooperativeDDPGAgent
 from tensorboardX import SummaryWriter
 from unityagents import UnityEnvironment
-from utilities import transpose_list, make_tensor
+from utilities import make_tensor, transpose_to_tensor
 
 
 def seeding(seed=1):
@@ -35,9 +35,9 @@ def main():
     # number of parallel agents
     # number of training episodes.
     # change this to higher number to experiment. say 30000.
-    number_of_episodes = 3000
+    number_of_episodes = 4 # 3000
     episode_length = 80
-    batchsize = 1000
+    batchsize = 2 # 1000
     # how many episodes to save policy and gif
     save_interval = 1000
 
@@ -46,8 +46,8 @@ def main():
     noise = 2
     noise_reduction = 0.9999
 
-    discount_factor=0.95
-    tau=0.02
+    discount_factor = 0.95
+    tau = 0.02
 
     # how many episodes before update
     episode_per_update = 2
@@ -96,8 +96,8 @@ def main():
         discount_factor=discount_factor, 
         tau=tau)
     logger = SummaryWriter(log_dir=log_path)
-    agent0_reward = []
-    agent1_reward = []
+
+    all_scores = []
 
     # training loop
     # show progressbar
@@ -124,10 +124,11 @@ def main():
             # explore = only explore for a certain number of episodes
             # action input needs to be transposed
             actions = agent.act(make_tensor(obs), noise=noise)
+            actions = actions.detach().numpy()
             noise *= noise_reduction
 
             # step forward one frame
-            env_info = env.step(actions.detach().numpy())[brain_name]
+            env_info = env.step(actions)[brain_name]
             next_obs = env_info.vector_observations
             rewards = env_info.rewards
             dones = env_info.local_done
@@ -143,36 +144,31 @@ def main():
 
         # update once after every episode_per_update
         if len(buffer) > batchsize and episode % episode_per_update < 1:
-            for a_i in range(3):
-                samples = buffer.sample(batchsize)
-                agent.update(samples, a_i, logger)
+            samples = buffer.sample(batchsize)
+            samples = transpose_to_tensor(samples)
+            agent.update(samples, logger)
             agent.update_targets()  # soft update the target network towards the actual networks
 
-        for i in range(1):
-            agent0_reward.append(reward_this_episode[i, 0])
-            agent1_reward.append(reward_this_episode[i, 1])
-
-        if episode % 100 == 0 or episode == number_of_episodes-1:
-            avg_rewards = [np.mean(agent0_reward), np.mean(agent1_reward)]
-            agent0_reward = []
-            agent1_reward = []
-            for a_i, avg_rew in enumerate(avg_rewards):
-                logger.add_scalar('agent%i/mean_episode_rewards' %
-                                  a_i, avg_rew, episode)
-
         # saving model
-        save_dict_list = []
         if save_info:
-            for i in range(2):
+            save_dict = {'actor_params': agent.actor.state_dict(),
+                            'actor_optim_params': agent.actor_optimizer.state_dict(),
+                            'critic_params': agent.critic.state_dict(),
+                            'critic_optim_params': agent.critic_optimizer.state_dict()}
 
-                save_dict = {'actor_params': agent.maddpg_agent[i].actor.state_dict(),
-                             'actor_optim_params': agent.maddpg_agent[i].actor_optimizer.state_dict(),
-                             'critic_params': agent.maddpg_agent[i].critic.state_dict(),
-                             'critic_optim_params': agent.maddpg_agent[i].critic_optimizer.state_dict()}
-                save_dict_list.append(save_dict)
+            torch.save(save_dict,
+                        os.path.join(model_dir, 'episode-{}.pt'.format(episode)))
 
-                torch.save(save_dict_list,
-                           os.path.join(model_dir, 'episode-{}.pt'.format(episode)))
+
+        episode_score = np.max(reward_this_episode)
+        all_scores.append(episode_score)
+
+        running_mean = np.mean(all_scores[-min(100, episode):])
+        print('\rEpisode {}\tAverage Score: {:.2f}'.format(episode, running_mean), end="")
+
+        if running_mean >= 0.5:
+            print(f'Environment solved in {episode} episodes!')
+            break
 
     env.close()
     logger.close()
