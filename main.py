@@ -10,7 +10,7 @@ from buffer import ReplayBuffer
 from agent import CooperativeDDPGAgent
 from tensorboardX import SummaryWriter
 from unityagents import UnityEnvironment
-from utilities import transpose_list, transpose_to_tensor
+from utilities import transpose_list, make_tensor
 
 
 def seeding(seed=1):
@@ -112,8 +112,7 @@ def main():
 
         reward_this_episode = np.zeros(num_agents)
         env_info = env.reset(train_mode=False)[brain_name]
-        all_obs = env_info.vector_observations
-        obs, obs_full = transpose_list(all_obs)
+        obs = env_info.vector_observations
 
         # for calculating rewards for this particular episode - addition of all time steps
 
@@ -124,32 +123,23 @@ def main():
 
             # explore = only explore for a certain number of episodes
             # action input needs to be transposed
-            actions = agent.act(transpose_to_tensor(obs), noise=noise)
+            actions = agent.act(make_tensor(obs), noise=noise)
             noise *= noise_reduction
 
-            actions_array = torch.stack(actions).detach().numpy()
-
-            # transpose the list of list
-            # flip the first two indices
-            # input to step requires the first index to correspond to number of parallel agents
-            actions_for_env = np.rollaxis(actions_array, 1)
-
             # step forward one frame
-            env_info = env.step(actions_for_env)[brain_name]
-            all_next_obs = env_info.vector_observations
-            next_obs, next_obs_full = transpose_list(all_next_obs)
+            env_info = env.step(actions)[brain_name]
+            next_obs = env_info.vector_observations
             rewards = env_info.rewards
             dones = env_info.dones
 
             # add data to buffer
-            transition = (obs, obs_full, actions_for_env,
-                          rewards, next_obs, next_obs_full, dones)
+            transition = (obs, actions, rewards, next_obs, dones)
 
             buffer.push(transition)
 
             reward_this_episode += rewards
 
-            obs, obs_full = next_obs, next_obs_full
+            obs = next_obs
 
         # update once after every episode_per_update
         if len(buffer) > batchsize and episode % episode_per_update < 1:
