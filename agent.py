@@ -16,12 +16,12 @@ class CooperativeDDPGAgent:
     def __init__(self, in_actor, hidden_in_actor, hidden_out_actor, out_actor, in_critic, hidden_in_critic, hidden_out_critic, num_agents, lr_actor=1.0e-2, lr_critic=1.0e-2, discount_factor=0.95, tau=0.02):
         super(CooperativeDDPGAgent, self).__init__()
 
-        self.actor = Actor(in_actor, hidden_in_actor,
-                           hidden_out_actor, out_actor).to(device)
+        self.actors = [Actor(in_actor, hidden_in_actor,
+                           hidden_out_actor, out_actor).to(device) for _ in range(num_agents)]
         self.critic = Critic(in_critic, hidden_in_critic,
                              hidden_out_critic, 1).to(device)
-        self.target_actor = Actor(
-            in_actor, hidden_in_actor, hidden_out_actor, out_actor).to(device)
+        self.target_actors = [Actor(
+            in_actor, hidden_in_actor, hidden_out_actor, out_actor).to(device) for _ in range(num_agents)]
         self.target_critic = Critic(
             in_critic, hidden_in_critic, hidden_out_critic, 1).to(device)
 
@@ -35,26 +35,34 @@ class CooperativeDDPGAgent:
         self.iter = 0
 
         # Initialize networks
-        self.actor.reset_parameters()
+        for actor in self.actors:
+            actor.reset_parameters()
         self.critic.reset_parameters()
 
         # initialize targets same as original networks
-        hard_update(self.target_actor, self.actor)
+        for target_actor, actor in zip(self.target_actors, self.actors):
+            hard_update(target_actor, actor)
         hard_update(self.target_critic, self.critic)
 
-        self.actor_optimizer = Adam(self.actor.parameters(), lr=lr_actor)
+        self.actor_optimizers = [Adam(actor.parameters(), lr=lr_actor) for actor in self.actors]
         self.critic_optimizer = Adam(
             self.critic.parameters(), lr=lr_critic, weight_decay=1.e-5)
 
-    def act(self, obs, noise=0.0):
+    
+    def _act(self, actors, obs, noise=0.0):
         obs = obs.to(device)
-        action = self.actor(obs) + noise*self.noise.noise()
-        return action
+        actions = []
+        for agent_num, actor in enumerate(actors):
+            agent_obs = torch.index_select(obs, -2, torch.tensor([agent_num]))
+            action = actor(agent_obs) + noise*self.noise.noise()
+            actions.append(action)
+        return torch.cat(actions, dim=-2)
+
+    def act(self, obs, noise=0.0):
+        return self._act(self.actors, obs, noise)
 
     def target_act(self, obs, noise=0.0):
-        obs = obs.to(device)
-        action = self.target_actor(obs) + noise*self.noise.noise()
-        return action
+        return self._act(self.target_actors, obs, noise)
 
     def update(self, samples, logger):
         """update the critics and actors of all the agents """
@@ -63,22 +71,30 @@ class CooperativeDDPGAgent:
         cl = self.update_critic(samples)
 
         # Then the actors
-        al = self.update_actor(samples)
+        for agent_num in range(self.num_agents):
+            al = self.update_actor(samples, agent_num)
 
-        logger.add_scalars('agent/losses',
-                            {'critic loss': cl,
-                            'actor_loss': al},
-                            self.iter)
+            logger.add_scalars(f'agent{agent_num}/losses',
+                                {'critic loss': cl,
+                                'actor_loss': al},
+                                self.iter)
 
-    def update_actor(self, samples):
+    def update_actor(self, samples, agent_num):
         obs, *_ = samples
 
+        actor = self.actors[agent_num]
+        actor_optimizer = self.actor_optimizers[agent_num]
+
         # update actor network using policy gradient
-        self.actor_optimizer.zero_grad()
+        actor_optimizer.zero_grad()
+
+        # Select agent_num's observations
+        obs = torch.index_select(obs, 1, torch.tensor([agent_num]))
+
         # make input to agent
         # detach the other agents to save computation
         # saves some time for computing derivative
-        q_input = self.actor(obs)
+        q_input = actor(obs)
 
         # combine all the actions and observations for input to critic
         # many of the obs are redundant, and obs[1] contains all useful information already
@@ -88,7 +104,7 @@ class CooperativeDDPGAgent:
         actor_loss = -self.critic(q_input2).mean()
         actor_loss.backward()
         # torch.nn.utils.clip_grad_norm_(self.actor.parameters(),0.5)
-        self.actor_optimizer.step()
+        actor_optimizer.step()
 
         return actor_loss.cpu().detach().item()
 
@@ -126,5 +142,6 @@ class CooperativeDDPGAgent:
 
     def update_targets(self):
         self.iter += 1
-        soft_update(self.target_actor, self.actor, self.tau)
+        for target_actor, actor in zip(self.target_actors, self.actors):
+            soft_update(target_actor, actor, self.tau)
         soft_update(self.target_critic, self.critic, self.tau)

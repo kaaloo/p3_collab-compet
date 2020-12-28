@@ -143,12 +143,16 @@ def main():
 
         # saving model
         if save_info:
-            save_dict = {'actor_params': agent.actor.state_dict(),
-                            'actor_optim_params': agent.actor_optimizer.state_dict(),
-                            'critic_params': agent.critic.state_dict(),
-                            'critic_optim_params': agent.critic_optimizer.state_dict()}
+            dicts = [{
+                'critic_params': agent.critic.state_dict(),
+                'critic_optim_params': agent.critic_optimizer.state_dict()
+            }]
+            for actor, optimizer in zip(agent.actors, agent.actor_optimizers):
+                save_dict = {'actor_params': actor.state_dict(),
+                                'actor_optim_params': optimizer.state_dict()}
+                dicts.append(save_dict)
 
-            torch.save(save_dict,
+            torch.save(dicts,
                         os.path.join(model_dir, 'episode-{}.pt'.format(episode)))
 
 
