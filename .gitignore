@@ -1,3 +1,6 @@
 
 Tennis_Linux
 .vscode
+__pycache__
+log
+unity-environment.log
