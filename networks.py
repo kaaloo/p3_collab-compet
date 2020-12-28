@@ -1,3 +1,4 @@
+import torch
 import torch.nn as nn
 import torch.nn.functional as f
 import numpy as np
@@ -39,7 +40,7 @@ class Actor(Network):
 
     def forward(self, x):
         x = super(Actor, self).forward(x)
-        return f.tanh(x)
+        return torch.tanh(x)
 
 class Critic(Network):
     def __init__(self, input_dim, hidden_in_dim, hidden_out_dim, output_dim):

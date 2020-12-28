@@ -35,7 +35,7 @@ def main():
     # number of parallel agents
     # number of training episodes.
     # change this to higher number to experiment. say 30000.
-    number_of_episodes = 3000
+    number_of_episodes = 30000
     episode_length = 80
     batchsize = 1000
     # how many episodes to save policy and gif
@@ -43,7 +43,7 @@ def main():
 
     # amplitude of OU noise
     # this slowly decreases to 0
-    noise = 10
+    noise = 2
     noise_reduction = 0.9999
 
     discount_factor = 0.95
@@ -83,15 +83,18 @@ def main():
     # keep 5000 episodes worth of replay
     buffer = ReplayBuffer(int(5000*episode_length))
 
+    actor_hidden = state_size*state_size // 2
+    critic_hidden = (state_size + action_size) * (state_size + action_size) // 2
+
     # initialize policy and critic
     agent = CooperativeDDPGAgent(
         state_size, 
-        2*state_size, 
-        state_size, 
+        actor_hidden, 
+        actor_hidden // 2, 
         action_size, 
         state_size + action_size, 
-        2 * (state_size + action_size), 
-        state_size + action_size, 
+        critic_hidden, 
+        critic_hidden // 2, 
         num_agents, 
         discount_factor=discount_factor, 
         tau=tau)
@@ -116,7 +119,7 @@ def main():
             # explore = only explore for a certain number of episodes
             # action input needs to be transposed
             actions = agent.act(make_tensor(obs), noise=noise)
-            actions = actions.detach().numpy()
+            actions = actions.cpu().detach().numpy()
             noise *= noise_reduction
 
             # step forward one frame

@@ -7,9 +7,10 @@ import torch.distributed as dist
 
 from torch.autograd import Variable
 
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 def make_tensor(x):
-    return torch.tensor(x, dtype=torch.float)
+    return torch.tensor(x, dtype=torch.float, device=device)
 
 
 def transpose_list(mylist):

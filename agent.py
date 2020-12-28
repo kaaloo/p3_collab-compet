@@ -1,3 +1,4 @@
+from numpy.core.numeric import indices
 import torch
 import torch.nn.functional as F
 
@@ -9,8 +10,7 @@ from utilities import hard_update, soft_update
 from OUNoise import OUNoise
 
 
-#device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-device = "cpu"
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 class CooperativeDDPGAgent:
     def __init__(self, in_actor, hidden_in_actor, hidden_out_actor, out_actor, in_critic, hidden_in_critic, hidden_out_critic, num_agents, lr_actor=1.0e-2, lr_critic=1.0e-2, discount_factor=0.95, tau=0.02):
@@ -53,8 +53,9 @@ class CooperativeDDPGAgent:
         obs = obs.to(device)
         actions = []
         for agent_num, actor in enumerate(actors):
-            agent_obs = torch.index_select(obs, -2, torch.tensor([agent_num]))
-            action = actor(agent_obs) + noise*self.noise.noise()
+            indices = torch.tensor([agent_num]).to(device)
+            agent_obs = torch.index_select(obs, -2, indices)
+            action = actor(agent_obs) + noise*self.noise.noise().to(device)
             actions.append(action)
         return torch.cat(actions, dim=-2)
 
@@ -69,14 +70,14 @@ class CooperativeDDPGAgent:
 
         # First we update the critic
         cl = self.update_critic(samples)
+        logger.add_scalars('critic/loss', {'critic loss': cl}, self.iter)
 
         # Then the actors
         for agent_num in range(self.num_agents):
             al = self.update_actor(samples, agent_num)
 
             logger.add_scalars(f'agent{agent_num}/losses',
-                                {'critic loss': cl,
-                                'actor_loss': al},
+                                {'actor_loss': al},
                                 self.iter)
 
     def update_actor(self, samples, agent_num):
@@ -89,7 +90,8 @@ class CooperativeDDPGAgent:
         actor_optimizer.zero_grad()
 
         # Select agent_num's observations
-        obs = torch.index_select(obs, 1, torch.tensor([agent_num]))
+        indices = torch.tensor([agent_num], device=device)
+        obs = torch.index_select(obs, 1, indices)
 
         # make input to agent
         # detach the other agents to save computation
@@ -122,14 +124,14 @@ class CooperativeDDPGAgent:
         # y = reward of this timestep + discount * Q(st+1,at+1) from target network
         target_actions = self.target_act(next_obs)
 
-        target_critic_input = torch.cat((next_obs, target_actions), dim=2).to(device)
+        target_critic_input = torch.cat((next_obs, target_actions), dim=2)
 
         with torch.no_grad():
             q_next = self.target_critic(target_critic_input)
             q_next = q_next.squeeze()
 
         y = reward + self.discount_factor * q_next * (1 - done)
-        critic_input = torch.cat((obs, action), dim=2).to(device)
+        critic_input = torch.cat((obs, action), dim=2)
         q = self.critic(critic_input)
         q = q.squeeze()
 
