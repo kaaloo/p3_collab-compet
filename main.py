@@ -127,7 +127,7 @@ def main():
             noise *= noise_reduction
 
             # step forward one frame
-            env_info = env.step(actions)[brain_name]
+            env_info = env.step(actions.detach().numpy())[brain_name]
             next_obs = env_info.vector_observations
             rewards = env_info.rewards
             dones = env_info.dones
