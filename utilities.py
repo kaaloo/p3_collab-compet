@@ -8,16 +8,20 @@ import torch.distributed as dist
 from torch.autograd import Variable
 
 
+def make_tensor(x):
+    return torch.tensor(x, dtype=torch.float)
+
+
 def transpose_list(mylist):
     return list(map(list, zip(*mylist)))
 
 
 def transpose_to_tensor(input_list):
-    def make_tensor(x): return torch.tensor(x, dtype=torch.float)
     return list(map(make_tensor, zip(*input_list)))
 
-
 # https://github.com/ikostrikov/pytorch-ddpg-naf/blob/master/ddpg.py#L11
+
+
 def soft_update(target, source, tau):
     """
     Perform DDPG soft update (move target params toward source based on weight
