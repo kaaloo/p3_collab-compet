@@ -12,7 +12,7 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 
 class DDPGAgent:
-    def __init__(self, in_actor, hidden_in_actor, hidden_out_actor, out_actor, in_critic, hidden_in_critic, hidden_out_critic, lr_actor=1.0e-2, lr_critic=1.0e-2, tau=0.02):
+    def __init__(self, in_actor, hidden_in_actor, hidden_out_actor, out_actor, in_critic, hidden_in_critic, hidden_out_critic, lr_actor=1.0e-2, lr_critic=1.0e-2, discount_factor=0.95, tau=0.02):
         super(DDPGAgent, self).__init__()
 
         self.actor = Actor(in_actor, hidden_in_actor,
@@ -26,7 +26,10 @@ class DDPGAgent:
 
         self.noise = OUNoise(out_actor, scale=1.0)
 
+        self.discount_factor = discount_factor
         self.tau = tau
+
+        self.iter = 0
 
         # Initialize networks
         self.actor.reset_parameters()
@@ -56,19 +59,27 @@ class DDPGAgent:
         # First we update the critic
         cl = self.update_critic(self, samples)
 
+        # Then the actor, once for each agent
+        for agent_number in range(2):
+            al = self.update_actor(self, samples, agent_number)
+
+            logger.add_scalars('agent%i/losses' % agent_number,
+                               {'critic loss': cl,
+                                'actor_loss': al},
+                               self.iter)
+
+    def update_actor(self, samples, agent_number):
         # need to transpose each element of the samples
         # to flip obs[parallel_agent][agent_number] to
         # obs[agent_number][parallel_agent]
-        obs, obs_full, action, reward, next_obs, next_obs_full, done = samples
+        obs, obs_full, *_ = samples
 
         # update actor network using policy gradient
         self.actor_optimizer.zero_grad()
         # make input to agent
         # detach the other agents to save computation
         # saves some time for computing derivative
-        q_input = [self.ddpg_agents[i].actor(ob) if i == agent_number
-                   else self.ddpg_agents[i].actor(ob).detach()
-                   for i, ob in enumerate(obs)]
+        q_input = self.actor(obs[agent_number])
 
         q_input = torch.cat(q_input, dim=1)
         # combine all the actions and observations for input to critic
@@ -81,13 +92,7 @@ class DDPGAgent:
         # torch.nn.utils.clip_grad_norm_(self.actor.parameters(),0.5)
         self.actor_optimizer.step()
 
-        al = actor_loss.cpu().detach().item()
-        
-        logger.add_scalars('agent%i/losses' % agent_number,
-                           {'critic loss': cl,
-                            'actor_loss': al},
-                           self.iter)
-
+        return actor_loss.cpu().detach().item()
 
     def update_critic(self, samples):
         """update the critics and return loss """
@@ -95,7 +100,7 @@ class DDPGAgent:
         # need to transpose each element of the samples
         # to flip obs[parallel_agent][agent_number] to
         # obs[agent_number][parallel_agent]
-        obs, obs_full, action, reward, next_obs, next_obs_full, done = samples
+        _, obs_full, action, reward, next_obs, next_obs_full, done = samples
 
         obs_full = torch.stack(obs_full)
         next_obs_full = torch.stack(next_obs_full)
@@ -127,7 +132,7 @@ class DDPGAgent:
 
         return critic_loss.cpu().detach().item()
 
-
     def update_targets(self):
+        self.iter += 1
         soft_update(self.target_actor, self.actor, self.tau)
         soft_update(self.target_critic, self.critic, self.tau)
