@@ -11,9 +11,9 @@ from OUNoise import OUNoise
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 
-class DDPGAgent:
-    def __init__(self, in_actor, hidden_in_actor, hidden_out_actor, out_actor, in_critic, hidden_in_critic, hidden_out_critic, lr_actor=1.0e-2, lr_critic=1.0e-2, discount_factor=0.95, tau=0.02):
-        super(DDPGAgent, self).__init__()
+class CooperativeDDPGAgent:
+    def __init__(self, in_actor, hidden_in_actor, hidden_out_actor, out_actor, in_critic, hidden_in_critic, hidden_out_critic, num_agents, lr_actor=1.0e-2, lr_critic=1.0e-2, discount_factor=0.95, tau=0.02):
+        super(CooperativeDDPGAgent, self).__init__()
 
         self.actor = Actor(in_actor, hidden_in_actor,
                            hidden_out_actor, out_actor).to(device)
@@ -25,6 +25,8 @@ class DDPGAgent:
             in_critic, hidden_in_critic, hidden_out_critic, 1).to(device)
 
         self.noise = OUNoise(out_actor, scale=1.0)
+
+        self.num_agents = num_agents
 
         self.discount_factor = discount_factor
         self.tau = tau
@@ -60,7 +62,7 @@ class DDPGAgent:
         cl = self.update_critic(self, samples)
 
         # Then the actor, once for each agent
-        for agent_number in range(2):
+        for agent_number in range(self.num_agents):
             al = self.update_actor(self, samples, agent_number)
 
             logger.add_scalars('agent%i/losses' % agent_number,
