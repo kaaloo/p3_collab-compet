@@ -100,15 +100,7 @@ def main():
     all_scores = []
 
     # training loop
-    # show progressbar
-    widget = ['episode: ', pb.Counter(), '/', str(number_of_episodes), ' ',
-              pb.Percentage(), ' ', pb.ETA(), ' ', pb.Bar(marker=pb.RotatingMarker()), ' ']
-
-    timer = pb.ProgressBar(widgets=widget, maxval=number_of_episodes).start()
-
     for episode in range(0, number_of_episodes):
-
-        timer.update(episode)
 
         reward_this_episode = np.zeros(num_agents)
         env_info = env.reset(train_mode=False)[brain_name]
@@ -172,8 +164,6 @@ def main():
 
     env.close()
     logger.close()
-    timer.finish()
-
 
 if __name__ == '__main__':
     main()
