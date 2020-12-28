@@ -38,7 +38,7 @@ class Actor(Network):
         super(Actor, self).__init__(input_dim, hidden_in_dim, hidden_out_dim, output_dim)
 
     def forward(self, x):
-        x = super(Network, self).forward(x)
+        x = super(Actor, self).forward(x)
         return f.tanh(x)
 
 class Critic(Network):
@@ -46,4 +46,4 @@ class Critic(Network):
         super(Critic, self).__init__(input_dim, hidden_in_dim, hidden_out_dim, output_dim)
 
     def forward(self, x):
-        return super(Network, self).forward(x)
+        return super(Critic, self).forward(x)
