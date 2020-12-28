@@ -4,3 +4,4 @@ Tennis_Linux
 __pycache__
 log
 unity-environment.log
+model_dir
