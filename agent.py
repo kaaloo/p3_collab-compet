@@ -18,11 +18,11 @@ class CooperativeDDPGAgent:
         self.actor = Actor(in_actor, hidden_in_actor,
                            hidden_out_actor, out_actor).to(device)
         self.critic = Critic(in_critic, hidden_in_critic,
-                             hidden_out_critic, num_agents).to(device)
+                             hidden_out_critic, 1).to(device)
         self.target_actor = Actor(
             in_actor, hidden_in_actor, hidden_out_actor, out_actor).to(device)
         self.target_critic = Critic(
-            in_critic, hidden_in_critic, hidden_out_critic, num_agents).to(device)
+            in_critic, hidden_in_critic, hidden_out_critic, 1).to(device)
 
         self.noise = OUNoise(out_actor, scale=1.0)
 
@@ -109,10 +109,12 @@ class CooperativeDDPGAgent:
 
         with torch.no_grad():
             q_next = self.target_critic(target_critic_input)
+            q_next = q_next.squeeze()
 
         y = reward + self.discount_factor * q_next * (1 - done)
         critic_input = torch.cat((obs, action), dim=2).to(device)
         q = self.critic(critic_input)
+        q = q.squeeze()
 
         huber_loss = torch.nn.SmoothL1Loss()
         critic_loss = huber_loss(q, y.detach())

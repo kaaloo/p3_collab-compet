@@ -35,9 +35,9 @@ def main():
     # number of parallel agents
     # number of training episodes.
     # change this to higher number to experiment. say 30000.
-    number_of_episodes = 4 # 3000
+    number_of_episodes = 3000
     episode_length = 80
-    batchsize = 2 # 1000
+    batchsize = 1000
     # how many episodes to save policy and gif
     save_interval = 1000
 
