@@ -34,10 +34,16 @@ class Network(nn.Module):
         return self.fc3(x)
 
 class Actor(Network):
+    def __init__(self, input_dim, hidden_in_dim, hidden_out_dim, output_dim):
+        super(Actor, self).__init__(input_dim, hidden_in_dim, hidden_out_dim, output_dim)
+
     def forward(self, x):
         x = super(Network, self).forward(x)
         return f.tanh(x)
 
 class Critic(Network):
+    def __init__(self, input_dim, hidden_in_dim, hidden_out_dim, output_dim):
+        super(Critic, self).__init__(input_dim, hidden_in_dim, hidden_out_dim, output_dim)
+
     def forward(self, x):
         return super(Network, self).forward(x)
