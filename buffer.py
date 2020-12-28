@@ -1,7 +1,6 @@
 import random
 
 from collections import deque
-from utilities import transpose_list
 
 
 class ReplayBuffer:
@@ -12,17 +11,12 @@ class ReplayBuffer:
     def push(self, transition):
         """push into the buffer"""
 
-        input_to_buffer = transpose_list(transition)
-
-        for item in input_to_buffer:
-            self.deque.append(item)
+        self.deque.append(transition)
 
     def sample(self, batchsize):
         """sample from the buffer"""
         samples = random.sample(self.deque, batchsize)
-
-        # transpose list of list
-        return transpose_list(samples)
+        return samples
 
     def __len__(self):
         return len(self.deque)
