@@ -7,7 +7,7 @@ import progressbar as pb
 import torch
 
 from buffer import ReplayBuffer
-from maddpg import MADDPG
+from agent import CooperativeDDPGAgent
 from tensorboardX import SummaryWriter
 from unityagents import UnityEnvironment
 from utilities import transpose_list, transpose_to_tensor
@@ -46,6 +46,9 @@ def main():
     noise = 2
     noise_reduction = 0.9999
 
+    discount_factor=0.95
+    tau=0.02
+
     # how many episodes before update
     episode_per_update = 2
 
@@ -81,7 +84,7 @@ def main():
     buffer = ReplayBuffer(int(5000*episode_length))
 
     # initialize policy and critic
-    maddpg = MADDPG()
+    maddpg = CooperativeDDPGAgent(14, 16, 8, 2, 20, 32, 16, num_agents, discount_factor=discount_factor, tau=tau)
     logger = SummaryWriter(log_dir=log_path)
     agent0_reward = []
     agent1_reward = []
