@@ -130,7 +130,7 @@ def main():
             env_info = env.step(actions.detach().numpy())[brain_name]
             next_obs = env_info.vector_observations
             rewards = env_info.rewards
-            dones = env_info.dones
+            dones = env_info.local_done
 
             # add data to buffer
             transition = (obs, actions, rewards, next_obs, dones)
