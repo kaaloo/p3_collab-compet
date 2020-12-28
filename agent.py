@@ -18,11 +18,11 @@ class CooperativeDDPGAgent:
         self.actor = Actor(in_actor, hidden_in_actor,
                            hidden_out_actor, out_actor).to(device)
         self.critic = Critic(in_critic, hidden_in_critic,
-                             hidden_out_critic, 1).to(device)
+                             hidden_out_critic, num_agents).to(device)
         self.target_actor = Actor(
             in_actor, hidden_in_actor, hidden_out_actor, out_actor).to(device)
         self.target_critic = Critic(
-            in_critic, hidden_in_critic, hidden_out_critic, 1).to(device)
+            in_critic, hidden_in_critic, hidden_out_critic, num_agents).to(device)
 
         self.noise = OUNoise(out_actor, scale=1.0)
 
@@ -59,34 +59,29 @@ class CooperativeDDPGAgent:
         """update the critics and actors of all the agents """
 
         # First we update the critic
-        cl = self.update_critic(self, samples)
+        cl = self.update_critic(samples)
 
-        # Then the actor, once for each agent
-        for agent_number in range(self.num_agents):
-            al = self.update_actor(self, samples, agent_number)
+        # Then the actors
+        al = self.update_actor(samples)
 
-            logger.add_scalars('agent%i/losses' % agent_number,
-                               {'critic loss': cl,
-                                'actor_loss': al},
-                               self.iter)
+        logger.add_scalars('agent/losses',
+                            {'critic loss': cl,
+                            'actor_loss': al},
+                            self.iter)
 
-    def update_actor(self, samples, agent_number):
-        # need to transpose each element of the samples
-        # to flip obs[parallel_agent][agent_number] to
-        # obs[agent_number][parallel_agent]
-        obs, obs_full, *_ = samples
+    def update_actor(self, samples):
+        obs, *_ = samples
 
         # update actor network using policy gradient
         self.actor_optimizer.zero_grad()
         # make input to agent
         # detach the other agents to save computation
         # saves some time for computing derivative
-        q_input = self.actor(obs[agent_number])
+        q_input = self.actor(obs)
 
-        q_input = torch.cat(q_input, dim=1)
         # combine all the actions and observations for input to critic
         # many of the obs are redundant, and obs[1] contains all useful information already
-        q_input2 = torch.cat((obs_full.t(), q_input), dim=1)
+        q_input2 = torch.cat((obs, q_input), dim=2)
 
         # get the policy gradient
         actor_loss = -self.critic(q_input2).mean()
@@ -102,28 +97,21 @@ class CooperativeDDPGAgent:
         # need to transpose each element of the samples
         # to flip obs[parallel_agent][agent_number] to
         # obs[agent_number][parallel_agent]
-        _, obs_full, action, reward, next_obs, next_obs_full, done = samples
-
-        obs_full = torch.stack(obs_full)
-        next_obs_full = torch.stack(next_obs_full)
+        obs, action, reward, next_obs, done = samples
 
         self.critic_optimizer.zero_grad()
 
         # critic loss = batch mean of (y- Q(s,a) from target network)^2
         # y = reward of this timestep + discount * Q(st+1,at+1) from target network
         target_actions = self.target_act(next_obs)
-        target_actions = torch.cat(target_actions, dim=1)
 
-        target_critic_input = torch.cat(
-            (next_obs_full.t(), target_actions), dim=1).to(device)
+        target_critic_input = torch.cat((next_obs, target_actions), dim=2).to(device)
 
         with torch.no_grad():
             q_next = self.target_critic(target_critic_input)
 
-        y = reward.view(-1, 1) + self.discount_factor * \
-            q_next * (1 - done.view(-1, 1))
-        action = torch.cat(action, dim=1)
-        critic_input = torch.cat((obs_full.t(), action), dim=1).to(device)
+        y = reward + self.discount_factor * q_next * (1 - done)
+        critic_input = torch.cat((obs, action), dim=2).to(device)
         q = self.critic(critic_input)
 
         huber_loss = torch.nn.SmoothL1Loss()
