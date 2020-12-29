@@ -35,7 +35,7 @@ def main():
     # number of parallel agents
     # number of training episodes.
     # change this to higher number to experiment. say 30000.
-    number_of_episodes = 30000
+    number_of_episodes = 3000
     episode_length = 80
     batchsize = 1000
     # how many episodes to save policy and gif
@@ -43,8 +43,8 @@ def main():
 
     # amplitude of OU noise
     # this slowly decreases to 0
-    noise = 2
-    noise_reduction = 0.9999
+    noise = 4
+    noise_reduction = 0.999999
 
     discount_factor = 0.95
     tau = 0.02
@@ -88,11 +88,10 @@ def main():
 
     # initialize policy and critic
     agent = CooperativeDDPGAgent(
-        state_size, 
+        state_size,
+        action_size,
         actor_hidden, 
         actor_hidden // 2, 
-        action_size, 
-        state_size + action_size, 
         critic_hidden, 
         critic_hidden // 2, 
         num_agents, 
@@ -163,7 +162,7 @@ def main():
         all_scores.append(episode_score)
 
         running_mean = np.mean(all_scores[-min(100, episode):])
-        print('\rEpisode {}\tAverage Score: {:.2f}'.format(episode, running_mean), end="")
+        logger.add_scalars('score', {'score': episode_score, 'mean_score': running_mean}, agent.iter)
 
         if running_mean >= 0.5:
             print(f'Environment solved in {episode} episodes!')
