@@ -35,7 +35,7 @@ def main():
     # number of parallel agents
     # number of training episodes.
     # change this to higher number to experiment. say 30000.
-    number_of_episodes = 5000
+    number_of_episodes = 10000
     episode_length = 300
     batchsize = 1000
     # how many episodes to save policy and gif
@@ -44,7 +44,7 @@ def main():
     # amplitude of OU noise
     # this slowly decreases to 0
     noise = 4
-    noise_reduction = 0.999999
+    noise_reduction = 0.999995
 
     discount_factor = 0.95
     tau = 0.02
@@ -83,8 +83,8 @@ def main():
     # keep 5000 episodes worth of replay
     buffer = ReplayBuffer(int(5000*episode_length))
 
-    actor_hidden = state_size*state_size // 2
-    critic_hidden = (state_size + action_size) * (state_size + action_size) // 2
+    actor_hidden = int(0.8 * state_size ** 2)
+    critic_hidden = int(0.8 * (state_size + action_size) ** 2)
 
     # initialize policy and critic
     agent = CooperativeDDPGAgent(
@@ -143,8 +143,14 @@ def main():
             agent.update(samples, logger)
             agent.update_targets()  # soft update the target network towards the actual networks
 
+        episode_score = np.max(reward_this_episode)
+        all_scores.append(episode_score)
+
+        running_mean = np.mean(all_scores[-min(100, episode):])
+        logger.add_scalars('score', {'score': episode_score, 'mean_score': running_mean}, agent.iter)
+
         # saving model
-        if save_info:
+        if save_info or running_mean >= 0.5:
             dicts = [{
                 'critic_params': agent.critic.state_dict(),
                 'critic_optim_params': agent.critic_optimizer.state_dict()
@@ -156,13 +162,6 @@ def main():
 
             torch.save(dicts,
                         os.path.join(model_dir, 'episode-{}.pt'.format(episode)))
-
-
-        episode_score = np.max(reward_this_episode)
-        all_scores.append(episode_score)
-
-        running_mean = np.mean(all_scores[-min(100, episode):])
-        logger.add_scalars('score', {'score': episode_score, 'mean_score': running_mean}, agent.iter)
 
         if running_mean >= 0.5:
             print(f'Environment solved in {episode} episodes!')

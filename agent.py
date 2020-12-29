@@ -93,8 +93,8 @@ class CooperativeDDPGAgent:
         actor_loss = -self.critic(obs, q_input).squeeze().mean(dim=0)
         actor_loss.mean().backward()
 
-        # torch.nn.utils.clip_grad_norm_(self.actor.parameters(),0.5)
-        for actor_optimizer in self.actor_optimizers:
+        for actor, actor_optimizer in zip(self.actors, self.actor_optimizers):
+            torch.nn.utils.clip_grad_norm_(actor.parameters(), 0.5)
             actor_optimizer.step()
 
         return actor_loss.cpu().detach()
