@@ -3,12 +3,12 @@
 
 import os
 import numpy as np
-import progressbar as pb
 import torch
 
 from buffer import ReplayBuffer
 from agent import CooperativeDDPGAgent
 from tensorboardX import SummaryWriter
+from tqdm import tqdm
 from unityagents import UnityEnvironment
 from utilities import make_tensor, transpose_to_tensor
 
@@ -102,7 +102,7 @@ def main():
     all_scores = []
 
     # training loop
-    for episode in range(0, number_of_episodes):
+    for episode in tqdm(range(number_of_episodes)):
 
         reward_this_episode = np.zeros(num_agents)
         env_info = env.reset(train_mode=False)[brain_name]
