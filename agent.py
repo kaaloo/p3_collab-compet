@@ -73,45 +73,28 @@ class CooperativeDDPGAgent:
         logger.add_scalars('critic/loss', {'critic loss': cl}, self.iter)
 
         # Then the actors
-        al = self.update_actors(samples)
+        als = self.update_actors(samples)
 
         for agent_num in range(self.num_agents):
-
             logger.add_scalars(f'agent{agent_num}/losses',
-                              {'actor_loss': al[agent_num]},
+                              {'actor_loss': als[agent_num]},
                               self.iter)
 
     def update_actors(self, samples):
         obs, *_ = samples
 
-        q_input = []
-        for agent_num in range(self.num_agents):
-            actor = self.actors[agent_num]
-            actor_optimizer = self.actor_optimizers[agent_num]
-
-            # update actor network using policy gradient
+        # update actor network using policy gradient
+        for actor_optimizer in self.actor_optimizers:
             actor_optimizer.zero_grad()
 
-            # Select agent_num's observations
-            indices = torch.tensor([agent_num], device=device)
-            actor_obs = torch.index_select(obs, 1, indices)
-            actor_obs = actor_obs.squeeze()
-
-            # make input to agent
-            # detach the other agents to save computation
-            # saves some time for computing derivative
-            q_input.append(actor(actor_obs))
-
-        q_input = torch.stack(q_input, dim=2)
+        q_input = self.act(obs)
 
         # get the policy gradient
-        actor_loss = -self.critic(obs, q_input)
-        actor_loss = actor_loss.squeeze().mean(dim=0)
-        for agent_num in range(self.num_agents):
-            actor_loss[agent_num].backward(retain_graph=True)
+        actor_loss = -self.critic(obs, q_input).squeeze().mean(dim=0)
+        actor_loss.mean().backward()
 
+        # torch.nn.utils.clip_grad_norm_(self.actor.parameters(),0.5)
         for actor_optimizer in self.actor_optimizers:
-            # torch.nn.utils.clip_grad_norm_(self.actor.parameters(),0.5)
             actor_optimizer.step()
 
         return actor_loss.cpu().detach()
