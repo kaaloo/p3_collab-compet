@@ -78,3 +78,33 @@ The following instructions are based on having Miniconda installed on your syste
 
 4. Install project specific dependencies by running:
     ```pip install -r requirements.txt```
+
+
+## Submission
+
+The submission consists of this README file explaining how to setup project dependencies, the REPORT file, the project source files and the tensorboard logs and saved models.
+
+
+The following table describes the different source files in this submission.
+File | Description
+---------|----------
+ agent.py | Collaborative MADDPG agent implementation
+ buffer.py | Replay buffer
+ main.py | Main (training) script
+ networks.py | Neural networks for Actor and Critic
+ OUNoise.py | Ornstein-Uhlenbeck noise generator
+ utilities.py | Various utility functions
+
+The `log` directory contains the tensorboard log files which can be viewed by running the following command and opening a browser window to https://localhost:3000
+
+```bash
+tensorboard --logdir=./log/ --host=0.0.0.0 --port=3000 &> /dev/null
+```
+
+The `model_dir` directory contains models saved during training and in particular the `model_dir/episode-1748.pt` file which is the model that solved the Tennis environement.
+
+The following command then runs the training script.  The `log` and `model_dir` directories need to be removed to avoid accumulating data with previous runs.
+
+```bash
+python main.py
+```

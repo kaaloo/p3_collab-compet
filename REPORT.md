@@ -2,35 +2,6 @@
 
 This project submission solves the ML-Agents Tennis environment reaching an average mean score over 100 episodes of 0.5 in 1748 episodes. The Tennis environment is fully collaborative since the agents are incentivized to maintain the ball in play as long as possible.  An appropriate algorithm for this situation is Open AI's MADDPG which also works well in a continuous action space.
 
-## Submission
-
-The submission consists of this report, a README file explaining how to setup project dependencies, the project source files and the tensorboard logs and saved models.
-
-
-The following table describes the different source files in this submission.
-File | Description
----------|----------
- agent.py | Collaborative MADDPG agent implementation
- buffer.py | Replay buffer
- main.py | Main (training) script
- networks.py | Neural networks for Actor and Critic
- OUNoise.py | Ornstein-Uhlenbeck noise generator
- utilities.py | Various utility functions
-
-The `log` directory contains the tensorboard log files which can be viewed by running the following command and opening a browser window to https://localhost:3000
-
-```bash
-tensorboard --logdir=./log/ --host=0.0.0.0 --port=3000 &> /dev/null
-```
-
-The `model_dir` directory contains models saved during training and in particular the `model_dir/episode-1748.pt` file which is the model that solved the Tennis environement.
-
-The following command then runs the training script.  The `log` and `model_dir` directories need to be removed to avoid accumulating data with previous runs.
-
-```bash
-python main.py
-```
-
 ## Methods
 
 The MADDPG source code was updated to work with ML-Agents by adapting the training script (`main.py`) through code contributions from the my previous Continuous Control project submission.  The actor and critic networks from the MADDPG lab codebase architecture of two hidden layers was conserved. Through various progressive cleanup steps (see commit history), a baseline version using the original hyperparameters able to run on CPU was obtained.  Getting the code to run on GPU required upgrading to the latest pytorch 1.7.1 and installing a cuda toolkit 11.1 compatible with the version nvidia cuda installed locally.  At this point, several refactoring operations where necessary on the code base to solve the Tennis environment.  Throughout this process several variants were tested which provided poor results.  
