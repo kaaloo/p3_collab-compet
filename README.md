@@ -59,4 +59,22 @@ You need only select the environment that matches your operating system:
 
 Then, place the file in the `p3_collab-compet/` folder in the DRLND GitHub repository, and unzip (or decompress) the file.  Next, open `Soccer.ipynb` and follow the instructions to learn how to use the Python API to control the agent.
 
-(_For AWS_) If you'd like to train the agents on AWS (and have not [enabled a virtual screen](https://github.com/Unity-Technologies/ml-agents/blob/master/docs/Training-on-Amazon-Web-Service.md)), then please use [this link](https://s3-us-west-1.amazonaws.com/udacity-drlnd/P3/Soccer/Soccer_Linux_NoVis.zip) to obtain the "headless" version of the environment.  You will **not** be able to watch the agents without enabling a virtual screen, but you will be able to train the agents.  (_To watch the agents, you should follow the instructions to [enable a virtual screen](https://github.com/Unity-Technologies/ml-agents/blob/master/docs/Training-on-Amazon-Web-Service.md), and then download the environment for the **Linux** operating system above._)
+
+## Python Dependencies
+
+The following instructions are based on having Miniconda installed on your system.  If that is not the case, please follow the [Miniconda installation instructions](https://docs.conda.io/projects/conda/en/latest/user-guide/install/).
+
+1. Create a conda python 3.6 environment using:
+
+    ```conda create -n p3 python=3.6```
+
+2. Activate the new environement using:
+
+    ```conda activate p3```
+
+3. Install the Udacity DRLND python dependencies by running:
+
+    ```pip install ./python```
+
+4. Install project specific dependencies by running:
+    ```pip install -r requirements.txt```
