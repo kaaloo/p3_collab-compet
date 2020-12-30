@@ -56,7 +56,7 @@ Layer | Size
 
 ## Results
 
-The agent solved the Tennis environment in 1748 episodes.  The following screenshots illustrate the episode (blue) and running mean over 100 episode (orange) scores, agent losses, and the critic loss.
+The agent solved the Tennis environment in 1748 episodes.  The following Tensorboard screenshots illustrate the episode (blue) and running mean over 100 episode (orange) scores, agent losses, and the critic loss. Note that since the `episodes_per_update` hyperparameter is set to 2, the range of the x axis in the following graphs corresponds to the episode number / 2.  So episode 1748 will show up in the graphs as episode 874. 
 
 ### Episode and Running Mean Scores
 
